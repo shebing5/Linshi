@@ -28,6 +28,25 @@ function truncate_log_file() {
     fi
 }
 
+# 更高效的文件重定向函数
+function redirect_file() {
+    local file="$1"
+    local destination="$2"
+    local filename=$(basename "$file")
+    local extension="${filename##*.}"
+    local base="${filename%.*}"
+    local suffix=1
+
+    while [ -e "$destination/${base}_$suffix.$extension" ]; do
+        suffix=$((suffix + 1))
+    done
+
+    new_filename="${base}_$suffix.$extension"
+    mv "$file" "$destination/$new_filename"
+    log_action "已移动文件 $file 到 $destination/$new_filename"
+    echo "已移动文件 $file 到 $destination/$new_filename"
+}
+
 # 移动文件并分类
 function move_files() {
     local src_dir="$1"
@@ -122,22 +141,7 @@ function move_files() {
         esac
 
         check_dir "$destination"
-
-        if [ -e "$destination/$filename" ]; then
-            # 如果目标文件已存在，避免覆盖，重新命名文件
-            base="${filename%.*}"
-            suffix=1
-            while [ -e "$destination/${base}_$suffix.$extension}" ]; do
-                suffix=$((suffix + 1))
-            done
-            new_filename="${base}_$suffix.$extension}"
-        else
-            new_filename="$filename"
-        fi
-
-        mv "$file" "$destination/$new_filename"
-        log_action "已移动文件 $file 到 $destination/$new_filename"
-        echo "已移动文件 $file 到 $destination/$new_filename"
+        redirect_file "$file" "$destination"
     done
 }
 
@@ -213,21 +217,7 @@ function classify_and_move() {
     esac
 
     check_dir "$destination"
-
-    if [ -e "$destination/$filename" ]; then
-        base="${filename%.*}"
-        suffix=1
-        while [ -e "$destination/${base}_$suffix.$extension}" ]; do
-            suffix=$((suffix + 1))
-        done
-        new_filename="${base}_$suffix.$extension}"
-    else
-        new_filename="$filename"
-    fi
-
-    mv "$file" "$destination/$new_filename"
-    log_action "已移动文件 $file 到 $destination/$new_filename"
-    echo "已移动文件 $file 到 $destination/$new_filename"
+    redirect_file "$file" "$destination"
 }
 
 # 对指定目录进行递归处理
